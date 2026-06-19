@@ -28,7 +28,7 @@ def is_valid_prompt(prompt: str) -> bool:
 async def create_scene(request: SceneRequest):
     if not is_valid_prompt(request.prompt):
         raise HTTPException(status_code=400, detail="Prompt inválido")
-    
+
     embedding = get_embedding(request.prompt)
     candidates = search_similar_sounds(embedding)
 
@@ -40,6 +40,10 @@ async def create_scene(request: SceneRequest):
         raise HTTPException(status_code=422, detail="Prompt muito distante dos sons disponíveis")
 
     scene = generate_scene(request.prompt, candidates)
-    return scene
 
+    url_map = {c["id"]: c["preview_url"] for c in candidates}
+    for sound in scene["sounds"]:
+        sound["preview_url"] = url_map.get(sound["id"], "")
+
+    return scene
 
