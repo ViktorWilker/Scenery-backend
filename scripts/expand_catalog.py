@@ -64,8 +64,8 @@ def search_freesound(query: str, n: int = 5) -> list[dict]:
     
     queries_to_try = [
         query,
-        " ".join(query.split()[:3]),  # primeiras 3 palavras
-        " ".join(query.split()[:2]),  # primeiras 2 palavras
+        " ".join(query.split()[:3]), 
+        " ".join(query.split()[:2]), 
     ]
     seen = set()
     queries_to_try = [q for q in queries_to_try if not (q in seen or seen.add(q))]
