@@ -3,16 +3,17 @@ from pydantic import BaseModel
 from app.services.embedding import get_embedding
 from app.services.gemini import generate_scene
 from app.services.vector_search import search_similar_sounds
+from app.services.knowledge_search import search_knowledge, format_for_prompt
 
 router = APIRouter()
 
-MIN_SCORE = 0.5
 MIN_PROMPT_LENGTH = 5
+
 
 class SceneRequest(BaseModel):
     prompt: str
 
-    
+
 def is_valid_prompt(prompt: str) -> bool:
     stripped = prompt.strip()
     if len(stripped) < MIN_PROMPT_LENGTH:
@@ -30,20 +31,18 @@ async def create_scene(request: SceneRequest):
         raise HTTPException(status_code=400, detail="Prompt inválido")
 
     embedding = get_embedding(request.prompt)
-    candidates = search_similar_sounds(embedding)
+    candidates = search_similar_sounds(embedding, top_k=15)
 
     if not candidates:
         raise HTTPException(status_code=404, detail="Nenhum som encontrado")
 
-    best_score = candidates[0].get("score", 0)
-    if best_score < MIN_SCORE:
-        raise HTTPException(status_code=422, detail="Prompt muito distante dos sons disponíveis")
+    knowledge_chunks = search_knowledge(request.prompt)
+    knowledge_context = format_for_prompt(knowledge_chunks)
 
-    scene = generate_scene(request.prompt, candidates)
+    scene = generate_scene(request.prompt, candidates, knowledge_context)
 
     url_map = {c["id"]: c["preview_url"] for c in candidates}
     for sound in scene["sounds"]:
         sound["preview_url"] = url_map.get(sound["id"], "")
 
     return scene
-
